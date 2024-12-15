@@ -31,6 +31,7 @@ func main() {
 	})
 
 	api.POST("/users", userHandler.RegisteUser)
+	api.POST("/sessions", userHandler.LoginUser)
 
 	r.Run()
 }
