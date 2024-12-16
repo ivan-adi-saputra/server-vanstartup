@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"server-vanstartup/helper"
 	"server-vanstartup/user"
@@ -94,4 +95,36 @@ func (h *UserHandler) CheckEmailAvaibility(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, helper.ApiResponse(message, http.StatusOK, "SUCCESS", data))
+}
+
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, helper.ApiResponse("Upload avatar failed", http.StatusUnprocessableEntity, "FAILED", gin.H{
+			"is_uploaded": false,
+		}))
+		return
+	}
+
+	path := fmt.Sprintf("images/%d-%s", 1, file.Filename)
+
+	err = c.SaveUploadedFile(file, path)
+	if err != nil {
+		c.JSON(http.StatusUnprocessableEntity, helper.ApiResponse("Upload avatar failed", http.StatusUnprocessableEntity, "FAILED", gin.H{
+			"is_uploaded": false,
+		}))
+		return
+	}
+
+	_, err = h.userService.UploadAvatar(1, path)
+	if err!= nil {
+		c.JSON(http.StatusInternalServerError, helper.ApiResponse("Upload avatar failed", http.StatusInternalServerError, "FAILED", gin.H{
+			"is_uploaded": false,
+		}))
+		return
+	}
+
+	c.JSON(http.StatusOK, helper.ApiResponse("Upload avatar successfully", http.StatusOK, "SUCCESS", gin.H{
+		"is_uploaded": true,
+	}))
 }
