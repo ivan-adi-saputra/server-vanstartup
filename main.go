@@ -4,8 +4,11 @@ import (
 	"net/http"
 	"server-vanstartup/auth"
 	"server-vanstartup/handler"
+	"server-vanstartup/helper"
 	"server-vanstartup/user"
+	"strings"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -36,7 +39,45 @@ func main() {
 	api.POST("/users", userHandler.RegisteUser)
 	api.POST("/sessions", userHandler.LoginUser)
 	api.POST("/email-checkers", userHandler.CheckEmailAvaibility)
-	api.POST("/avatars", userHandler.UploadAvatar)
+	api.POST("/avatars", authMiddleware(authService, userService) , userHandler.UploadAvatar)
 
 	r.Run()
+}
+
+func authMiddleware(authService auth.Service, userService user.Service) gin.HandlerFunc {
+	return func (c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+	
+		if !strings.Contains(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, helper.ApiResponse("Unauthorized", http.StatusUnauthorized, "FAILED", nil))
+			return
+		}
+	
+		tokenString := ""
+		arrToken := strings.Split(tokenString, "Bearer ")
+		if len(arrToken) == 2 {
+			tokenString = arrToken[1]
+		}
+
+		jwtToken, err := authService.ValidateToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, helper.ApiResponse("Unauthorized", http.StatusUnauthorized, "FAILED", nil))
+			return
+		}
+
+		claim, ok := jwtToken.Claims.(jwt.MapClaims)
+		if !ok || !jwtToken.Valid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, helper.ApiResponse("Unauthorized", http.StatusUnauthorized, "FAILED", nil))
+			return
+		}
+
+		userID := int(claim["user_id"].(float64))
+		user, err := userService.GetUserByID(userID)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, helper.ApiResponse("Unauthorized", http.StatusUnauthorized, "FAILED", nil))
+			return
+		}
+
+		c.Set("currentUser", user)
+	}
 }
