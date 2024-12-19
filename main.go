@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"server-vanstartup/auth"
+	"server-vanstartup/campaign"
 	"server-vanstartup/handler"
 	"server-vanstartup/helper"
 	"server-vanstartup/user"
@@ -22,12 +24,21 @@ func main() {
 	}
 
 	userRepository := user.NewRepository(db)
+	campaignRepository := campaign.NewRepository(db)
+
 	userService := user.NewService(userRepository)
+	campaignService := campaign.NewService(campaignRepository)
+
 	authService := auth.NewJWTService()
 
 	userHandler := handler.NewUserHandler(userService, authService)
+	campaignHandler := handler.NewCampaignHandler(campaignService)
+	fmt.Println(campaignHandler)
 
 	r := gin.Default()
+
+	r.Static("/images", "./images")
+
 	api := r.Group("/api/v1")
 
 	api.GET("/", func (c *gin.Context)  {
@@ -40,6 +51,8 @@ func main() {
 	api.POST("/sessions", userHandler.LoginUser)
 	api.POST("/email-checkers", userHandler.CheckEmailAvaibility)
 	api.POST("/avatars", authMiddleware(authService, userService) , userHandler.UploadAvatar)
+
+	api.GET("/campaigns", campaignHandler.GetCampaigns)
 
 	r.Run()
 }
