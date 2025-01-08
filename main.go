@@ -1,12 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"server-vanstartup/auth"
 	"server-vanstartup/campaign"
 	"server-vanstartup/handler"
 	"server-vanstartup/helper"
+	"server-vanstartup/transaction"
 	"server-vanstartup/user"
 	"strings"
 
@@ -25,15 +25,17 @@ func main() {
 
 	userRepository := user.NewRepository(db)
 	campaignRepository := campaign.NewRepository(db)
+	transactionRepository := transaction.NewRepository(db)
 
 	userService := user.NewService(userRepository)
 	campaignService := campaign.NewService(campaignRepository)
+	transactionService := transaction.NewService(transactionRepository, campaignRepository)
 
 	authService := auth.NewJWTService()
 
 	userHandler := handler.NewUserHandler(userService, authService)
 	campaignHandler := handler.NewCampaignHandler(campaignService)
-	fmt.Println(campaignHandler)
+	transactionHandler := handler.NewTransactionHandler(transactionService)
 
 	r := gin.Default()
 
@@ -57,6 +59,8 @@ func main() {
 	api.POST("/campaigns", authMiddleware(authService, userService) , campaignHandler.CreateCampaign)
 	api.PUT("/campaigns/:id", authMiddleware(authService, userService), campaignHandler.UpdateCampaign)
 	api.POST("/campaign-images", authMiddleware(authService, userService), campaignHandler.UploadImage)
+
+	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 
 	r.Run()
 }
