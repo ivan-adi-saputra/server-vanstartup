@@ -6,6 +6,7 @@ import (
 	"server-vanstartup/campaign"
 	"server-vanstartup/handler"
 	"server-vanstartup/helper"
+	"server-vanstartup/payment"
 	"server-vanstartup/transaction"
 	"server-vanstartup/user"
 	"strings"
@@ -29,7 +30,8 @@ func main() {
 
 	userService := user.NewService(userRepository)
 	campaignService := campaign.NewService(campaignRepository)
-	transactionService := transaction.NewService(transactionRepository, campaignRepository)
+	paymentService := payment.NewService()
+	transactionService := transaction.NewService(transactionRepository, campaignRepository, paymentService)
 
 	authService := auth.NewJWTService()
 
@@ -62,6 +64,8 @@ func main() {
 
 	api.GET("/campaigns/:id/transactions", authMiddleware(authService, userService), transactionHandler.GetCampaignTransactions)
 	api.GET("/transactions", authMiddleware(authService, userService), transactionHandler.GetUserTransactions)
+	api.POST("/transactions", authMiddleware(authService, userService), transactionHandler.CreateTransaction)
+	api.POST("/transactions/notification", transactionHandler.GetNotification)
 
 	r.Run()
 }
